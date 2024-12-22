@@ -1,0 +1,170 @@
+services:
+  # Kinda production service
+  app:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=pgbouncer
+      - DB_PORT=${PGBOUNCER_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - KEYCLOAK_HOST=${KEYCLOAK_HOST}
+    depends_on:
+      - pgbouncer
+      - keycloak
+
+  # Development main service
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env
+    volumes:
+      - .:/app # Map local source code to /app in the container
+      - go-cache:/go # Cache for Go modules
+    ports:
+      - "8080:8080"
+    environment:
+      - GO_ENV=development
+      - DB_HOST=pgbouncer
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - KEYCLOAK_HOST=${KEYCLOAK_HOST}
+    command: air
+    depends_on:
+      - pgbouncer
+      - keycloak
+
+  # IAM service
+  keycloak:
+    image: jboss/keycloak
+    env_file:
+      - .env
+    environment:
+      - KEYCLOAK_USER=${KEYCLOAK_ADMIN}
+      - KEYCLOAK_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - DB_VENDOR=postgres
+      - DB_ADDR=pgbouncer
+      - DB_PORT=${PGBOUNCER_PORT}
+      - DB_DATABASE=keycloak
+      - DB_USER=keycloak
+      - DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}
+    depends_on:
+      - pgbouncer
+
+  # Database pooler service
+  pgbouncer:
+    image: edoburu/pgbouncer
+    env_file:
+      - .env
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=${PGBOUNCER_MAX_CLIENT_CONN}
+      - DEFAULT_POOL_SIZE=${PGBOUNCER_DEFAULT_POOL_SIZE}
+      - RESERVE_POOL_SIZE=${PGBOUNCER_DEFAULT_POOL_SIZE}
+      - MAX_DB_CONNECTIONS=${PGBOUNCER_MAX_DB_CONNECTIONS}
+      - MAX_USER_CONNECTIONS=${PGBOUNCER_MAX_USER_CONNECTIONS}
+      - ADMIN_USER=${PGBOUNCER_ADMIN_USER}
+      - ADMIN_PASSWORD=${PGBOUNCER_ADMIN_PASSWORD}
+    ports:
+      - "${PGBOUNCER_PORT}:6432"
+    depends_on:
+      - postgres
+
+  # Database service
+  postgres:
+    image: postgres:13
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+
+  # Visualisation
+  grafana:
+    image: grafana/grafana
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    depends_on:
+      - prometheus
+
+  # Exporting PostgreSQL metrics to Prometheus
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+
+  # Exporting node metrics (system metrics) to Prometheus
+  node-exporter:
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      # Specify the path to the proc filesystem
+      - '--path.procfs=/host/proc'
+      # Specify the path to the sys filesystem
+      - '--path.sysfs=/host/sys'
+      # Exclude certain mount points from filesystem metrics collection to avoid unnecessary data
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+  # Backuping service
+  backup:
+    image: prodrigestivill/postgres-backup-local
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRES_HOST=${DB_HOST}
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${BACKUP_USER}
+      - POSTGRES_PASSWORD=${BACKUP_PASSWORD}
+      - SCHEDULE=@daily
+      - BACKUP_KEEP_DAYS=7
+      - BACKUP_KEEP_WEEKS=4
+      - BACKUP_KEEP_MONTHS=6
+    volumes:
+      - /var/opt/pgbackups:/backups
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+  go-cache:

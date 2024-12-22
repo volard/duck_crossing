@@ -1,0 +1,28 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Sensitive files
+**/secrets/
+**/credentials/
+**/*.key
+**/*.pem
+
+# Development artifacts
+/tmp
+.air.toml
+
+# SSL certificates
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Directories that may contain certificates
+certs/
+ssl/
+private/
+
