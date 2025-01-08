@@ -1,10 +1,13 @@
 # Twin city or smth backend
 
-## Packages
+## Overview
+Docker
 
-- fiber as a web framework
-- prometheus/grafana for monitoring
-- docker for containerization
+### Front-end
+> TS + MobX + React
+
+### Back-end
+> GO lang + [fiber](https://docs.gofiber.io/) + Keycloak + Prometheus/Grafana
 
 
 ## Development

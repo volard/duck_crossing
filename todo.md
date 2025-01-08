@@ -1,0 +1,11 @@
+- [ ] setup back-end locally (I'm here)
+- [ ] setup back-end in dev container with live reloading
+- [ ] setup front-end locally
+- [ ] setup front-end in dev container with live reloading
+- [ ] link front-end with back-end locally
+- [ ] link front-end with back-end in dev container environment
+- [ ] add keycloack to all this mess
+- [ ] add CRUD with pgbouncer
+- [ ] imitate some features\services
+- [ ] add message queue or whatever
+- [ ] design new surveys

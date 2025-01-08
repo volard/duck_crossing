@@ -1,19 +1,15 @@
 package main
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"log"
+)
 
 func main() {
-	// Create a new Fiber app
-	app := fiber.New()
+	app, err := InitializeApp()
+	if err != nil {
+		log.Fatalf("Failed to initialize app: %v", err)
+	}
 
-	// Define a simple route
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
-	})
-
-	// Start the server on port 3000
-    err := app.Listen(":3000")
-    if err != nil {
-        panic(err)
-    }
+	// Start the server
+	log.Fatal(app.Listen(":3000"))
 }
