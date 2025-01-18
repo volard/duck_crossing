@@ -1,15 +1,22 @@
 package main
 
 import (
-	"log"
+    "log"
+
+    "github.com/gofiber/fiber/v2"
 )
 
 func main() {
-	app, err := InitializeApp()
-	if err != nil {
-		log.Fatalf("Failed to initialize app: %v", err)
-	}
+    app := fiber.New()
 
-	// Start the server
-	log.Fatal(app.Listen(":3000"))
+    app.Get("/", func (c *fiber.Ctx) error {
+        return c.SendString("Hello, World!" )
+    })
+
+
+    app.Get("/secured", func (c *fiber.Ctx) error {
+        return c.SendString("only authorized fellas should see that" )
+    })
+
+    log.Fatal(app.Listen(":3000"))
 }

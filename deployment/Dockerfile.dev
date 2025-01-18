@@ -1,20 +1,23 @@
-FROM golang:1.21
+FROM golang:1.23.4
 
 WORKDIR /app
 
 # Install Air for live reload
 # Install delve for debugging
-RUN go install github.com/cosmtrek/air@latest && \
+RUN go install github.com/air-verse/air@latest && \
     go install github.com/go-delve/delve/cmd/dlv@latest
 
 # Copy go mod and sum files
-COPY go.mod go.sum ./
+COPY ../go.mod ../go.sum ./
 
 # Download dependencies
 RUN go mod download
 
 # Copy the entire project
-COPY . .
+COPY .. .
+
+# Expose port 3000 to the outside world
+EXPOSE 3000
 
 # Command to run Air
-CMD ["air"]
+ENTRYPOINT ["air"]
